@@ -1,0 +1,4 @@
+Pillow
+python-barcode
+pywin32
+sv-ttk
