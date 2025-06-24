@@ -462,7 +462,7 @@ entry.bind("<KeyRelease>", update_preview)
 
 tk.Label(root, text=_("num_copies")).pack()
 copies_var = tk.StringVar(value="1")
-copies_spinbox = tk.Spinbox(
+copies_spinbox = ttk.Spinbox(
     root, from_=1, to=100, textvariable=copies_var, width=5, font=("Segoe UI Variable", 12)
 )
 copies_spinbox.pack(pady=(0, 10))
