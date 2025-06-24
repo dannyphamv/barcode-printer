@@ -20,6 +20,7 @@ import threading
 import ctypes
 import os
 from pathlib import Path
+import pywinstyles, sys
 
 
 # --- Printer List Cache ---
@@ -440,6 +441,26 @@ root.geometry(config.get("window_size", "550x750"))
 root.minsize(600, 1000)
 
 
+# --- Theme Functions ---
+def apply_theme_to_titlebar(root):
+    """Apply theme-appropriate styling to the window title bar."""
+    version = sys.getwindowsversion()
+    current_theme = sv_ttk.get_theme()
+    
+    if version.major == 10 and version.build >= 22000:
+        # Windows 11: Set the title bar color to match the theme
+        header_color = "#1c1c1c" if current_theme == "dark" else "#fafafa"
+        pywinstyles.change_header_color(root, header_color)
+    elif version.major == 10:
+        # Windows 10: Apply dark or normal style based on theme
+        style = "dark" if current_theme == "dark" else "normal"
+        pywinstyles.apply_style(root, style)
+
+        # Force title bar update on Windows 10 (workaround for delayed updates)
+        root.wm_attributes("-alpha", 0.99)
+        root.wm_attributes("-alpha", 1)
+
+
 # --- Theme Persistence ---
 def get_theme_from_config():
     return config.get("theme", "dark")
@@ -462,6 +483,8 @@ def toggle_theme():
     theme_button.config(
         text=f"Switch to {'Dark' if new_theme == 'light' else 'Light'} Theme"
     )
+    # Update title bar to match new theme
+    apply_theme_to_titlebar(root)
 
 
 # Add theme toggle button to the top right
@@ -471,7 +494,6 @@ theme_button = ttk.Button(
     command=toggle_theme,
 )
 theme_button.pack(anchor="ne", padx=10, pady=5)
-
 
 def set_window_size(_event=None):
     """Update config with current window size on resize and debounce save."""
@@ -604,6 +626,7 @@ print_button.focus_set()
 root.bind("<Alt-p>", lambda e: print_button.invoke())
 root.bind("<Alt-r>", lambda e: reprint_button.invoke())
 
+apply_theme_to_titlebar(root)
 
 # --- Focus entry when window regains focus ---
 def focus_entry_on_window_focus(event=None):
