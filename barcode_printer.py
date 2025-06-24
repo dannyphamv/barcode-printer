@@ -290,6 +290,22 @@ def threaded_reprint(selected_items, selected_printer):
                     f"Reprinting {idx+1}/{len(selected_items)}: copy {c+1} of {copies}"
                 )
                 print_image(img, selected_printer)
+            # Update the count in the treeview and history after reprint
+            def update_reprint_count():
+                global barcode_history
+                # Update history
+                for item in barcode_history:
+                    if item.get("barcode") == barcode_text:
+                        item["copies"] += copies
+                        break
+                save_history(barcode_history)
+                # Update treeview
+                for row in listbox.get_children():
+                    row_values = listbox.item(row, "values")
+                    if row_values and row_values[0] == barcode_text:
+                        listbox.set(row, "Copies", int(row_values[1]) + copies)
+                        break
+            root.after(0, update_reprint_count)
         root.after(0, set_progress, "Done.")
     except (OSError, RuntimeError) as exc:
         def show_error():
