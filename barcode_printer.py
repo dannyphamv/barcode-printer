@@ -394,7 +394,28 @@ root = tk.Tk()
 set_hidpi_scaling(root)
 root.title("Universal Barcode Printer")
 root.geometry(config.get("window_size", "550x750"))
-sv_ttk.set_theme("dark")
+
+# --- Theme Persistence ---
+def get_theme_from_config():
+    return config.get("theme", "dark")
+
+def set_theme_in_config(theme):
+    config["theme"] = theme
+    debounced_config_saver.save()
+
+sv_ttk.set_theme(get_theme_from_config())
+
+# --- Theme Toggle Button ---
+def toggle_theme():
+    current_theme = sv_ttk.get_theme()
+    new_theme = "light" if current_theme == "dark" else "dark"
+    sv_ttk.set_theme(new_theme)
+    set_theme_in_config(new_theme)
+    theme_button.config(text=f"Switch to {'Dark' if new_theme == 'light' else 'Light'} Theme")
+
+# Add theme toggle button to the top right
+theme_button = ttk.Button(root, text=f"Switch to {'Light' if get_theme_from_config() == 'dark' else 'Dark'} Theme", command=toggle_theme)
+theme_button.pack(anchor="ne", padx=10, pady=5)
 
 
 def set_window_size(_event=None):
