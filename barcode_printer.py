@@ -455,7 +455,7 @@ def on_printer_selected(_event=None):
 printer_dropdown.bind("<<ComboboxSelected>>", on_printer_selected)
 
 tk.Label(root, text=_("scan_barcode")).pack()
-entry = tk.Entry(root, font=("Aptos", 16), width=35)
+entry = tk.Entry(root, font=("Segoe UI Variable", 12), width=35)
 entry.pack(pady=5)
 entry.focus()
 entry.bind("<KeyRelease>", update_preview)
@@ -463,7 +463,7 @@ entry.bind("<KeyRelease>", update_preview)
 tk.Label(root, text=_("num_copies")).pack()
 copies_var = tk.StringVar(value="1")
 copies_spinbox = tk.Spinbox(
-    root, from_=1, to=100, textvariable=copies_var, width=5, font=("Aptos", 12)
+    root, from_=1, to=100, textvariable=copies_var, width=5, font=("Segoe UI Variable", 12)
 )
 copies_spinbox.pack(pady=(0, 10))
 
@@ -474,7 +474,7 @@ preview_label.pack(pady=(0, 10))
 # --- Progress Indicator ---
 progress_var = tk.StringVar(value="")
 progress_label = tk.Label(
-    root, textvariable=progress_var, font=("Aptos", 10), fg="white"
+    root, textvariable=progress_var, font=("Segoe UI Variable", 12), fg="white"
 )
 progress_label.pack(pady=(0, 5))
 
@@ -508,7 +508,7 @@ entry.bind("<Return>", lambda event: on_print())
 
 # --- Status Bar ---
 status_var = tk.StringVar(value="Ready")
-status_label = tk.Label(root, textvariable=status_var, font=("Aptos", 10), fg="gray")
+status_label = tk.Label(root, textvariable=status_var, font=("Segoe UI Variable", 12), fg="gray")
 status_label.pack(pady=(0, 5))
 
 
