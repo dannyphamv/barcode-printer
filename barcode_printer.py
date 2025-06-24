@@ -195,23 +195,47 @@ def threaded_print(
     """Threaded print operation to keep UI responsive."""
     global barcode_history
     try:
-        set_progress(f"Printing {copies} copies...")
+        def set_progress_safe(msg):
+            root.after(0, set_progress, msg)
+        set_progress_safe(f"Printing {copies} copies...")
         for i in range(copies):
-            set_progress(f"Printing copy {i+1} of {copies}...")
+            set_progress_safe(f"Printing copy {i+1} of {copies}...")
             print_image(img, printer_name)
-        # Add to history treeview and persist
-        listbox.insert("", "end", values=(barcode_value, copies))
-        barcode_history = (barcode_history + [
-            {"barcode": barcode_value, "copies": copies}
-        ])[-100:]
-        save_history(barcode_history)
-        entry.delete(0, tk.END)
-        update_preview()
-        set_progress("Done.")
+        # Add to history treeview and persist (UI updates must be in main thread)
+        def update_history():
+            global barcode_history
+            # Check if barcode already exists in history
+            found = False
+            for idx, item in enumerate(barcode_history):
+                if item.get("barcode") == barcode_value:
+                    # Update copies count
+                    barcode_history[idx]["copies"] += copies
+                    found = True
+                    break
+            if not found:
+                barcode_history = (barcode_history + [
+                    {"barcode": barcode_value, "copies": copies}
+                ])[-100:]
+            save_history(barcode_history)
+            # Update the treeview
+            for row in listbox.get_children():
+                values = listbox.item(row, "values")
+                if values and values[0] == barcode_value:
+                    # Update the copies cell
+                    listbox.set(row, "Copies", int(values[1]) + copies if found else copies)
+                    break
+            else:
+                listbox.insert("", "end", values=(barcode_value, copies))
+            entry.delete(0, tk.END)
+            update_preview()
+            set_progress("Done.")
+        root.after(0, update_history)
     except (OSError, RuntimeError) as exc:
-        logging.error("Print Error: %s", exc)
-        messagebox.showerror("Print Error", str(exc))
-        set_progress("")
+        def show_error():
+            logging.error("Print Error: %s", exc)
+            messagebox.showerror("Print Error", str(exc))
+            set_progress("")
+        root.after(0, show_error)
 
 
 def handle_print() -> None:
@@ -251,8 +275,10 @@ def handle_print() -> None:
 
 def threaded_reprint(selected_items, selected_printer):
     """Threaded reprint operation to keep UI responsive."""
+    def set_progress_safe(msg):
+        root.after(0, set_progress, msg)
     try:
-        set_progress(f"Reprinting {len(selected_items)} barcode(s)...")
+        set_progress_safe(f"Reprinting {len(selected_items)} barcode(s)...")
         for idx, item_id in enumerate(selected_items):
             values = listbox.item(item_id, "values")
             if not values:
@@ -260,15 +286,17 @@ def threaded_reprint(selected_items, selected_printer):
             barcode_text, copies = values[0], int(values[1])
             img = generate_label_image(barcode_text)
             for c in range(copies):
-                set_progress(
+                set_progress_safe(
                     f"Reprinting {idx+1}/{len(selected_items)}: copy {c+1} of {copies}"
                 )
                 print_image(img, selected_printer)
-        set_progress("Done.")
+        root.after(0, set_progress, "Done.")
     except (OSError, RuntimeError) as exc:
-        logging.error("Reprint Error: %s", exc)
-        messagebox.showerror("Print Error", str(exc))
-        set_progress("")
+        def show_error():
+            logging.error("Reprint Error: %s", exc)
+            messagebox.showerror("Print Error", str(exc))
+            set_progress("")
+        root.after(0, show_error)
 
 
 def reprint_selected() -> None:
@@ -498,13 +526,15 @@ theme_button = ttk.Button(
 theme_button.pack(anchor="ne", padx=10, pady=5)
 
 
-def set_window_size(_event=None):
-    """Update config with current window size on resize and debounce save."""
+# Remove the <Configure> binding for window size
+# Save window size only on close and focus out
+
+def save_window_size_on_focus_out(event=None):
     config["window_size"] = root.geometry()
     debounced_config_saver.save()
 
 
-root.bind("<Configure>", set_window_size)
+root.bind("<FocusOut>", save_window_size_on_focus_out)
 
 # --- Set window icon using a PNG file ---
 try:
