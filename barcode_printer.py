@@ -577,14 +577,25 @@ print_button = ttk.Button(
 )
 print_button.pack(pady=(5, 10))
 
+# Create a frame for the treeview and scrollbar
+tree_frame = ttk.Frame(root)
+tree_frame.pack(pady=10, padx=10, fill="both", expand=False)
+
 # Use ttk.Treeview as a themed replacement for Listbox
 tree_columns = ("Barcode", "Copies")
-listbox = ttk.Treeview(root, columns=tree_columns, show="headings", height=10)
+listbox = ttk.Treeview(tree_frame, columns=tree_columns, show="headings", height=10)
 listbox.heading("Barcode", text="Barcode")
 listbox.heading("Copies", text="Copies")
 listbox.column("Barcode", width=350)
 listbox.column("Copies", width=80, anchor="center")
-listbox.pack(pady=10)
+
+# Create and configure scrollbar
+scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=listbox.yview)
+listbox.configure(yscrollcommand=scrollbar.set)
+
+# Pack the treeview and scrollbar
+listbox.pack(side="left", fill="both", expand=True)
+scrollbar.pack(side="right", fill="y")
 
 # Populate history on startup
 for item in barcode_history:
