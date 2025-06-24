@@ -137,7 +137,7 @@ def update_preview(event=None):
         # --- Ensure window is large enough for preview and all widgets ---
         root.update_idletasks()
         # Always enforce the minsize, do not shrink below it
-        min_width, min_height = 615, 907
+        min_width, min_height = 600, 1000  # Enforce your intended minimum
         preview_width = preview_img.width
         preview_height = preview_img.height
         extra_height = 400  # Adjust as needed for your layout
@@ -194,8 +194,8 @@ def threaded_print(
         for i in range(copies):
             set_progress(f"Printing copy {i+1} of {copies}...")
             print_image(img, printer_name)
-        # Add to history listbox
-        listbox.insert(tk.END, f"Printed: {barcode_value} x{copies}")
+        # Add to history treeview
+        listbox.insert('', 'end', values=(barcode_value, copies))
         entry.delete(0, tk.END)
         update_preview()
         set_progress("Done.")
@@ -240,17 +240,19 @@ def handle_print() -> None:
         messagebox.showerror("Print Error", str(exc))
 
 
-def threaded_reprint(selected_indices, selected_printer):
+def threaded_reprint(selected_items, selected_printer):
     """Threaded reprint operation to keep UI responsive."""
     try:
-        set_progress(f"Reprinting {len(selected_indices)} barcode(s)...")
-        for idx, i in enumerate(selected_indices):
-            item_text = listbox.get(i)
-            barcode_text, copies = parse_listbox_entry(item_text)
+        set_progress(f"Reprinting {len(selected_items)} barcode(s)...")
+        for idx, item_id in enumerate(selected_items):
+            values = listbox.item(item_id, 'values')
+            if not values:
+                continue
+            barcode_text, copies = values[0], int(values[1])
             img = generate_label_image(barcode_text)
             for c in range(copies):
                 set_progress(
-                    f"Reprinting {idx+1}/{len(selected_indices)}: copy {c+1} of {copies}"
+                    f"Reprinting {idx+1}/{len(selected_items)}: copy {c+1} of {copies}"
                 )
                 print_image(img, selected_printer)
         set_progress("Done.")
@@ -262,12 +264,12 @@ def threaded_reprint(selected_indices, selected_printer):
 
 def reprint_selected() -> None:
     """Handle the reprint button click event."""
-    selected_indices = listbox.curselection()
+    selected_items = listbox.selection()
     selected_printer = printer_var.get()
     if not selected_printer:
         messagebox.showwarning("No Printer Selected", "Please select a printer.")
         return
-    if not selected_indices:
+    if not selected_items:
         messagebox.showwarning(
             "No Selection", "Please select at least one barcode from the list."
         )
@@ -278,7 +280,7 @@ def reprint_selected() -> None:
         # Start reprint in a background thread
         threading.Thread(
             target=threaded_reprint,
-            args=(selected_indices, selected_printer),
+            args=(selected_items, selected_printer),
             daemon=True,
         ).start()
     except (OSError, RuntimeError) as exc:
@@ -395,7 +397,7 @@ root = tk.Tk()
 set_hidpi_scaling(root)
 root.title("Universal Barcode Printer")
 root.geometry(config.get("window_size", "550x750"))
-root.minsize(615, 907)
+root.minsize(600, 1000)
 
 # --- Theme Persistence ---
 def get_theme_from_config():
@@ -439,7 +441,7 @@ except Exception as exc:
 
 
 # --- Widgets ---
-tk.Label(root, text=_("select_printer")).pack(pady=(10, 0))
+ttk.Label(root, text=_("select_printer")).pack(pady=(10, 0))
 printer_var = tk.StringVar(value=config.get("default_printer", ""))
 printer_dropdown = ttk.Combobox(
     root, textvariable=printer_var, values=get_printers(force_refresh=True), width=50
@@ -454,27 +456,27 @@ def on_printer_selected(_event=None):
 
 printer_dropdown.bind("<<ComboboxSelected>>", on_printer_selected)
 
-tk.Label(root, text=_("scan_barcode")).pack()
-entry = tk.Entry(root, font=("Segoe UI Variable", 12), width=35)
+ttk.Label(root, text=_("scan_barcode")).pack()
+entry = ttk.Entry(root, font=("Segoe UI Variable", 12), width=35)
 entry.pack(pady=5)
 entry.focus()
 entry.bind("<KeyRelease>", update_preview)
 
-tk.Label(root, text=_("num_copies")).pack()
+ttk.Label(root, text=_("num_copies")).pack()
 copies_var = tk.StringVar(value="1")
 copies_spinbox = ttk.Spinbox(
     root, from_=1, to=100, textvariable=copies_var, width=5, font=("Segoe UI Variable", 12)
 )
 copies_spinbox.pack(pady=(0, 10))
 
-tk.Label(root, text=_("preview")).pack(pady=(10, 0))
-preview_label = tk.Label(root)
+ttk.Label(root, text=_("preview")).pack(pady=(10, 0))
+preview_label = ttk.Label(root)
 preview_label.pack(pady=(0, 10))
 
 # --- Progress Indicator ---
 progress_var = tk.StringVar(value="")
-progress_label = tk.Label(
-    root, textvariable=progress_var, font=("Segoe UI Variable", 12), fg="white"
+progress_label = ttk.Label(
+    root, textvariable=progress_var, font=("Segoe UI Variable", 12)
 )
 progress_label.pack(pady=(0, 5))
 
@@ -496,7 +498,13 @@ print_button = ttk.Button(
 )
 print_button.pack(pady=(5, 10))
 
-listbox = tk.Listbox(root, width=60, height=10, selectmode=tk.EXTENDED)
+# Use ttk.Treeview as a themed replacement for Listbox
+tree_columns = ("Barcode", "Copies")
+listbox = ttk.Treeview(root, columns=tree_columns, show="headings", height=10)
+listbox.heading("Barcode", text="Barcode")
+listbox.heading("Copies", text="Copies")
+listbox.column("Barcode", width=350)
+listbox.column("Copies", width=80, anchor="center")
 listbox.pack(pady=10)
 
 reprint_button = ttk.Button(
@@ -508,7 +516,7 @@ entry.bind("<Return>", lambda event: on_print())
 
 # --- Status Bar ---
 status_var = tk.StringVar(value="Ready")
-status_label = tk.Label(root, textvariable=status_var, font=("Segoe UI Variable", 12), fg="gray")
+status_label = ttk.Label(root, textvariable=status_var, font=("Segoe UI Variable", 12))
 status_label.pack(pady=(0, 5))
 
 
