@@ -366,9 +366,11 @@ def load_history():
 
 
 def save_history(history):
+    # Limit history to the most recent 100 entries
+    limited_history = history[-100:]
     try:
         with open(HISTORY_FILE, "w", encoding="utf-8") as f:
-            json.dump(history, f)
+            json.dump(limited_history, f)
     except OSError as exc:
         logging.error("Failed to save history: %s", exc)
 
