@@ -141,7 +141,7 @@ def update_preview(event=None):
         # --- Ensure window is large enough for preview and all widgets ---
         root.update_idletasks()
         # Always enforce the minsize, do not shrink below it
-        min_width, min_height = 600, 1000  # Enforce your intended minimum
+        min_width, min_height = 650, 1000  # Enforce your intended minimum
         preview_width = preview_img.width
         preview_height = preview_img.height
         extra_height = 400  # Adjust as needed for your layout
