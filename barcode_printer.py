@@ -18,6 +18,8 @@ import sv_ttk
 from collections import OrderedDict
 import threading
 import ctypes
+import os
+from pathlib import Path
 
 
 # --- Printer List Cache ---
@@ -60,8 +62,8 @@ def generate_label_image(barcode_text: str) -> Image.Image:
         # Create a white label and center the barcode on it
         label_width, label_height = 600, 300
         label_img = Image.new(
-            "RGB", (label_width, label_height), (255, 255, 255)
-        )  # pylint: disable=E1123
+            "RGB", (label_width, label_height), 0xFFFFFF
+        )
         barcode_x = (label_width - barcode_img.width) // 2
         barcode_y = (label_height - barcode_img.height) // 2
         label_img.paste(barcode_img, (barcode_x, barcode_y))
@@ -289,7 +291,11 @@ def reprint_selected() -> None:
 
 
 # --- Configuration ---
-CONFIG_FILE = "barcode_printer_config.json"
+# Store config in AppData/UniversalBarcodePrinter/barcode_printer_config.json
+APPDATA_DIR = Path(os.getenv('APPDATA', os.path.expanduser('~')))
+CONFIG_DIR = APPDATA_DIR / 'UniversalBarcodePrinter'
+CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+CONFIG_FILE = str(CONFIG_DIR / 'barcode_printer_config.json')
 DEFAULT_CONFIG = {
     "default_printer": "",
     "window_size": "550x750",
