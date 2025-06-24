@@ -52,7 +52,9 @@ def generate_label_image(barcode_text: str) -> Image.Image:
     if barcode_text in BARCODE_IMAGE_CACHE:
         # Move to end to mark as recently used
         BARCODE_IMAGE_CACHE.move_to_end(barcode_text)
-        return BARCODE_IMAGE_CACHE[barcode_text].copy()    # Generate barcode using python-barcode
+        return BARCODE_IMAGE_CACHE[
+            barcode_text
+        ].copy()  # Generate barcode using python-barcode
     code128 = python_barcode.get("code128", barcode_text, writer=ImageWriter())
     with io.BytesIO() as buffer:
         code128.write(buffer)
@@ -60,9 +62,7 @@ def generate_label_image(barcode_text: str) -> Image.Image:
         barcode_img = Image.open(buffer)
         # Create a white label and center the barcode on it
         label_width, label_height = 600, 300
-        label_img = Image.new(
-            "RGB", (label_width, label_height), 0xFFFFFF
-        )
+        label_img = Image.new("RGB", (label_width, label_height), 0xFFFFFF)
         barcode_x = (label_width - barcode_img.width) // 2
         barcode_y = (label_height - barcode_img.height) // 2
         label_img.paste(barcode_img, (barcode_x, barcode_y))
@@ -131,7 +131,9 @@ def update_preview(event=None):
     try:
         img = generate_label_image(barcode_value)
         # Resize preview for display (use fast filter)
-        preview_img = img.resize((400, 200), Image.BOX) if img.size != (400, 200) else img
+        preview_img = (
+            img.resize((400, 200), Image.BOX) if img.size != (400, 200) else img
+        )
         tk_img = ImageTk.PhotoImage(preview_img)
         preview_label.config(image=tk_img)
         setattr(preview_label, "image", tk_img)
@@ -197,8 +199,10 @@ def threaded_print(
             set_progress(f"Printing copy {i+1} of {copies}...")
             print_image(img, printer_name)
         # Add to history treeview and persist
-        listbox.insert('', 'end', values=(barcode_value, copies))
-        barcode_history = barcode_history + [{'barcode': barcode_value, 'copies': copies}]
+        listbox.insert("", "end", values=(barcode_value, copies))
+        barcode_history = barcode_history + [
+            {"barcode": barcode_value, "copies": copies}
+        ]
         save_history(barcode_history)
         entry.delete(0, tk.END)
         update_preview()
@@ -249,7 +253,7 @@ def threaded_reprint(selected_items, selected_printer):
     try:
         set_progress(f"Reprinting {len(selected_items)} barcode(s)...")
         for idx, item_id in enumerate(selected_items):
-            values = listbox.item(item_id, 'values')
+            values = listbox.item(item_id, "values")
             if not values:
                 continue
             barcode_text, copies = values[0], int(values[1])
@@ -294,10 +298,10 @@ def reprint_selected() -> None:
 
 # --- Configuration ---
 # Store config in AppData/UniversalBarcodePrinter/barcode_printer_config.json
-APPDATA_DIR = Path(os.getenv('APPDATA', os.path.expanduser('~')))
-CONFIG_DIR = APPDATA_DIR / 'UniversalBarcodePrinter'
+APPDATA_DIR = Path(os.getenv("APPDATA", os.path.expanduser("~")))
+CONFIG_DIR = APPDATA_DIR / "UniversalBarcodePrinter"
 CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-CONFIG_FILE = str(CONFIG_DIR / 'barcode_printer_config.json')
+CONFIG_FILE = str(CONFIG_DIR / "barcode_printer_config.json")
 DEFAULT_CONFIG = {
     "default_printer": "",
     "window_size": "550x750",
@@ -349,21 +353,24 @@ def save_config(cfg):
 config = load_config()
 
 # --- Barcode History Persistence ---
-HISTORY_FILE = str(CONFIG_DIR / 'barcode_history.json')
+HISTORY_FILE = str(CONFIG_DIR / "barcode_history.json")
+
 
 def load_history():
     try:
-        with open(HISTORY_FILE, 'r', encoding='utf-8') as f:
+        with open(HISTORY_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
     except (OSError, json.JSONDecodeError):
         return []
 
+
 def save_history(history):
     try:
-        with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
+        with open(HISTORY_FILE, "w", encoding="utf-8") as f:
             json.dump(history, f)
     except OSError as exc:
-        logging.error('Failed to save history: %s', exc)
+        logging.error("Failed to save history: %s", exc)
+
 
 barcode_history = load_history()
 
@@ -383,6 +390,7 @@ def on_exit():
 
 
 atexit.register(on_exit)
+
 
 # --- Debounced Config Save ---
 class DebouncedConfigSaver:
@@ -405,16 +413,21 @@ class DebouncedConfigSaver:
 
 debounced_config_saver = DebouncedConfigSaver()
 
+
 # --- HiDPI Scaling for Tkinter (Windows) ---
 def set_hidpi_scaling(root):
     try:
         # Only apply on Windows
-        if hasattr(ctypes, 'windll'):
+        if hasattr(ctypes, "windll"):
             user32 = ctypes.windll.user32
             user32.SetProcessDPIAware()
-            dpi = user32.GetDpiForSystem() if hasattr(user32, 'GetDpiForSystem') else user32.GetDeviceCaps(user32.GetDC(0), 88)
+            dpi = (
+                user32.GetDpiForSystem()
+                if hasattr(user32, "GetDpiForSystem")
+                else user32.GetDeviceCaps(user32.GetDC(0), 88)
+            )
             scaling = dpi / 72.0
-            root.tk.call('tk', 'scaling', scaling)
+            root.tk.call("tk", "scaling", scaling)
     except Exception as exc:
         print(f"Could not set HiDPI scaling: {exc}")
 
@@ -426,15 +439,19 @@ root.title("Universal Barcode Printer")
 root.geometry(config.get("window_size", "550x750"))
 root.minsize(600, 1000)
 
+
 # --- Theme Persistence ---
 def get_theme_from_config():
     return config.get("theme", "dark")
+
 
 def set_theme_in_config(theme):
     config["theme"] = theme
     debounced_config_saver.save()
 
+
 sv_ttk.set_theme(get_theme_from_config())
+
 
 # --- Theme Toggle Button ---
 def toggle_theme():
@@ -442,10 +459,17 @@ def toggle_theme():
     new_theme = "light" if current_theme == "dark" else "dark"
     sv_ttk.set_theme(new_theme)
     set_theme_in_config(new_theme)
-    theme_button.config(text=f"Switch to {'Dark' if new_theme == 'light' else 'Light'} Theme")
+    theme_button.config(
+        text=f"Switch to {'Dark' if new_theme == 'light' else 'Light'} Theme"
+    )
+
 
 # Add theme toggle button to the top right
-theme_button = ttk.Button(root, text=f"Switch to {'Light' if get_theme_from_config() == 'dark' else 'Dark'} Theme", command=toggle_theme)
+theme_button = ttk.Button(
+    root,
+    text=f"Switch to {'Light' if get_theme_from_config() == 'dark' else 'Dark'} Theme",
+    command=toggle_theme,
+)
 theme_button.pack(anchor="ne", padx=10, pady=5)
 
 
@@ -492,7 +516,12 @@ entry.bind("<KeyRelease>", update_preview)
 ttk.Label(root, text=_("num_copies")).pack()
 copies_var = tk.StringVar(value="1")
 copies_spinbox = ttk.Spinbox(
-    root, from_=1, to=100, textvariable=copies_var, width=5, font=("Segoe UI Variable", 12)
+    root,
+    from_=1,
+    to=100,
+    textvariable=copies_var,
+    width=5,
+    font=("Segoe UI Variable", 12),
 )
 copies_spinbox.pack(pady=(0, 10))
 
@@ -537,12 +566,12 @@ listbox.pack(pady=10)
 # Populate history on startup
 for item in barcode_history:
     if isinstance(item, dict):
-        barcode, copies = item.get('barcode'), item.get('copies', 1)
+        barcode, copies = item.get("barcode"), item.get("copies", 1)
     else:
         # Handle legacy format if needed
         barcode, copies = item, 1
     if barcode:
-        listbox.insert('', 'end', values=(barcode, copies))
+        listbox.insert("", "end", values=(barcode, copies))
 
 reprint_button = ttk.Button(
     root, text=_("reprint_selected"), command=reprint_selected, width=20
@@ -575,9 +604,11 @@ print_button.focus_set()
 root.bind("<Alt-p>", lambda e: print_button.invoke())
 root.bind("<Alt-r>", lambda e: reprint_button.invoke())
 
+
 # --- Focus entry when window regains focus ---
 def focus_entry_on_window_focus(event=None):
     entry.focus_set()
+
 
 root.bind("<FocusIn>", focus_entry_on_window_focus)
 
