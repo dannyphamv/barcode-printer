@@ -507,6 +507,12 @@ print_button.focus_set()
 root.bind("<Alt-p>", lambda e: print_button.invoke())
 root.bind("<Alt-r>", lambda e: reprint_button.invoke())
 
+# --- Focus entry when window regains focus ---
+def focus_entry_on_window_focus(event=None):
+    entry.focus_set()
+
+root.bind("<FocusIn>", focus_entry_on_window_focus)
+
 # Pillow plugin fix for PyInstaller
 _img_ref = ImageTk.PhotoImage(Image.new("RGB", (1, 1)))
 
