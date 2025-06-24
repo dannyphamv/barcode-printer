@@ -17,7 +17,6 @@ import tkinter as tk
 import sv_ttk
 from collections import OrderedDict
 import threading
-import time
 import ctypes
 
 
@@ -137,11 +136,13 @@ def update_preview(event=None):
         setattr(preview_label, "image", tk_img)
         # --- Ensure window is large enough for preview and all widgets ---
         root.update_idletasks()
+        # Always enforce the minsize, do not shrink below it
+        min_width, min_height = 615, 907
         preview_width = preview_img.width
         preview_height = preview_img.height
         extra_height = 400  # Adjust as needed for your layout
-        min_width = max(550, preview_width + 100)
-        min_height = max(750, preview_height + extra_height)
+        min_width = max(min_width, preview_width + 100)
+        min_height = max(min_height, preview_height + extra_height)
         root.minsize(min_width, min_height)
         # Save the new window size to config for next launch
         config["window_size"] = root.geometry()
@@ -394,6 +395,7 @@ root = tk.Tk()
 set_hidpi_scaling(root)
 root.title("Universal Barcode Printer")
 root.geometry(config.get("window_size", "550x750"))
+root.minsize(615, 907)
 
 # --- Theme Persistence ---
 def get_theme_from_config():
