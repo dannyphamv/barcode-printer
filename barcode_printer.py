@@ -440,7 +440,7 @@ root = tk.Tk()
 set_hidpi_scaling(root)
 root.title("Universal Barcode Printer")
 root.geometry(config.get("window_size", "550x750"))
-root.minsize(600, 1000)
+root.minsize(650, 1000)
 
 
 # --- Theme Functions ---
