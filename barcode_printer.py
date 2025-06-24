@@ -257,18 +257,8 @@ def handle_print() -> None:
             raise ValueError("Copies must be at least 1.")
     except ValueError:
         messagebox.showwarning(
-            "Invalid Copies", "Please enter a valid number of copies (1 or more)."
-        )
+            "Invalid Copies", "Please enter a valid number of copies (1 or more)."        )
         return
-    # Alert if the last printed barcode is the same as the current one
-    if (
-        len(barcode_history) > 0
-        and barcode_history[-1].get("barcode") == barcode_value
-    ):
-        messagebox.showwarning(
-            "Duplicate Barcode",
-            f"The barcode '{barcode_value}' was just printed. Please check if this is intentional."
-        )
     try:
         img = generate_label_image(barcode_value)
         import threading
