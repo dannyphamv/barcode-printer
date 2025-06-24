@@ -1,4 +1,4 @@
-Pillow
+Pillow==9.5.0
 python-barcode
 pywin32
 sv-ttk

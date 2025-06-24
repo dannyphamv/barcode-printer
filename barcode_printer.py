@@ -18,6 +18,7 @@ import sv_ttk
 from collections import OrderedDict
 import threading
 import time
+import ctypes
 
 
 # --- Printer List Cache ---
@@ -134,6 +135,17 @@ def update_preview(event=None):
         tk_img = ImageTk.PhotoImage(preview_img)
         preview_label.config(image=tk_img)
         setattr(preview_label, "image", tk_img)
+        # --- Ensure window is large enough for preview and all widgets ---
+        root.update_idletasks()
+        preview_width = preview_img.width
+        preview_height = preview_img.height
+        extra_height = 400  # Adjust as needed for your layout
+        min_width = max(550, preview_width + 100)
+        min_height = max(750, preview_height + extra_height)
+        root.minsize(min_width, min_height)
+        # Save the new window size to config for next launch
+        config["window_size"] = root.geometry()
+        debounced_config_saver.save()
     except (OSError, RuntimeError, ValueError) as exc:
         preview_label.config(image="")
         setattr(preview_label, "image", None)
@@ -363,11 +375,25 @@ class DebouncedConfigSaver:
 
 debounced_config_saver = DebouncedConfigSaver()
 
+# --- HiDPI Scaling for Tkinter (Windows) ---
+def set_hidpi_scaling(root):
+    try:
+        # Only apply on Windows
+        if hasattr(ctypes, 'windll'):
+            user32 = ctypes.windll.user32
+            user32.SetProcessDPIAware()
+            dpi = user32.GetDpiForSystem() if hasattr(user32, 'GetDpiForSystem') else user32.GetDeviceCaps(user32.GetDC(0), 88)
+            scaling = dpi / 72.0
+            root.tk.call('tk', 'scaling', scaling)
+    except Exception as exc:
+        print(f"Could not set HiDPI scaling: {exc}")
+
+
 # --- GUI Setup ---
 root = tk.Tk()
+set_hidpi_scaling(root)
 root.title("Universal Barcode Printer")
 root.geometry(config.get("window_size", "550x750"))
-root.resizable(False, False)  # Prevent window from being resized
 sv_ttk.set_theme("dark")
 
 
