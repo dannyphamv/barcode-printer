@@ -210,22 +210,24 @@ def threaded_print(
                 if item.get("barcode") == barcode_value:
                     # Update copies count
                     barcode_history[idx]["copies"] += copies
+                    # Move to top
+                    updated_item = barcode_history.pop(idx)
+                    barcode_history = [updated_item] + barcode_history
                     found = True
                     break
             if not found:
-                barcode_history = (barcode_history + [
-                    {"barcode": barcode_value, "copies": copies}
-                ])[-100:]
+                barcode_history = ([{"barcode": barcode_value, "copies": copies}] + barcode_history)[:100]
+            else:
+                barcode_history = barcode_history[:100]
             save_history(barcode_history)
             # Update the treeview
-            for row in listbox.get_children():
+            # Remove any existing row for this barcode
+            for row in list(listbox.get_children()):
                 values = listbox.item(row, "values")
                 if values and values[0] == barcode_value:
-                    # Update the copies cell
-                    listbox.set(row, "Copies", int(values[1]) + copies if found else copies)
-                    break
-            else:
-                listbox.insert("", "end", values=(barcode_value, copies))
+                    listbox.delete(row)
+            # Insert at the top
+            listbox.insert("", 0, values=(barcode_value, next((item["copies"] for item in barcode_history if item["barcode"] == barcode_value), copies)))
             entry.delete(0, tk.END)
             update_preview()
             set_progress("Done.")
@@ -302,17 +304,25 @@ def threaded_reprint(selected_items, selected_printer):
             def update_reprint_count():
                 global barcode_history
                 # Update history
-                for item in barcode_history:
+                for idx, item in enumerate(barcode_history):
                     if item.get("barcode") == barcode_text:
                         item["copies"] += copies
+                        # Move to top
+                        updated_item = barcode_history.pop(idx)
+                        barcode_history = [updated_item] + barcode_history
                         break
+                else:
+                    # If not found, add to top
+                    barcode_history = ([{"barcode": barcode_text, "copies": copies}] + barcode_history)[:100]
+                barcode_history = barcode_history[:100]
                 save_history(barcode_history)
-                # Update treeview
-                for row in listbox.get_children():
+                # Remove any existing row for this barcode
+                for row in list(listbox.get_children()):
                     row_values = listbox.item(row, "values")
                     if row_values and row_values[0] == barcode_text:
-                        listbox.set(row, "Copies", int(row_values[1]) + copies)
-                        break
+                        listbox.delete(row)
+                # Insert at the top
+                listbox.insert("", 0, values=(barcode_text, next((item["copies"] for item in barcode_history if item["barcode"] == barcode_text), copies)))
             root.after(0, update_reprint_count)
         root.after(0, set_progress, "Done.")
     except (OSError, RuntimeError) as exc:
@@ -654,14 +664,14 @@ listbox.pack(side="left", fill="both", expand=True)
 scrollbar.pack(side="right", fill="y")
 
 # Populate history on startup
-for item in barcode_history:
+for item in reversed(barcode_history):
     if isinstance(item, dict):
         barcode, copies = item.get("barcode"), item.get("copies", 1)
     else:
         # Handle legacy format if needed
         barcode, copies = item, 1
     if barcode:
-        listbox.insert("", "end", values=(barcode, copies))
+        listbox.insert("", 0, values=(barcode, copies))
 
 reprint_button = ttk.Button(
     root, text=_("reprint_selected"), command=reprint_selected, width=20
