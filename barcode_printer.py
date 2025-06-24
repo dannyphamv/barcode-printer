@@ -446,7 +446,7 @@ def apply_theme_to_titlebar(root):
     """Apply theme-appropriate styling to the window title bar."""
     version = sys.getwindowsversion()
     current_theme = sv_ttk.get_theme()
-    
+
     if version.major == 10 and version.build >= 22000:
         # Windows 11: Set the title bar color to match the theme
         header_color = "#1c1c1c" if current_theme == "dark" else "#fafafa"
@@ -494,6 +494,7 @@ theme_button = ttk.Button(
     command=toggle_theme,
 )
 theme_button.pack(anchor="ne", padx=10, pady=5)
+
 
 def set_window_size(_event=None):
     """Update config with current window size on resize and debounce save."""
@@ -627,6 +628,7 @@ root.bind("<Alt-p>", lambda e: print_button.invoke())
 root.bind("<Alt-r>", lambda e: reprint_button.invoke())
 
 apply_theme_to_titlebar(root)
+
 
 # --- Focus entry when window regains focus ---
 def focus_entry_on_window_focus(event=None):
