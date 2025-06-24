@@ -257,7 +257,8 @@ def handle_print() -> None:
             raise ValueError("Copies must be at least 1.")
     except ValueError:
         messagebox.showwarning(
-            "Invalid Copies", "Please enter a valid number of copies (1 or more)."        )
+            "Invalid Copies", "Please enter a valid number of copies (1 or more)."
+        )
         return
     try:
         img = generate_label_image(barcode_value)
