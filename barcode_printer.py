@@ -201,9 +201,9 @@ def threaded_print(
             print_image(img, printer_name)
         # Add to history treeview and persist
         listbox.insert("", "end", values=(barcode_value, copies))
-        barcode_history = barcode_history + [
+        barcode_history = (barcode_history + [
             {"barcode": barcode_value, "copies": copies}
-        ]
+        ])[-100:]
         save_history(barcode_history)
         entry.delete(0, tk.END)
         update_preview()
