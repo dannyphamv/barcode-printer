@@ -196,10 +196,8 @@ def threaded_print(
         for i in range(copies):
             set_progress(f"Printing copy {i+1} of {copies}...")
             print_image(img, printer_name)
-        # Add to history treeview and persist
+        # Add to history treeview
         listbox.insert('', 'end', values=(barcode_value, copies))
-        barcode_history.append({'barcode': barcode_value, 'copies': copies})
-        save_history(barcode_history)
         entry.delete(0, tk.END)
         update_preview()
         set_progress("Done.")
@@ -514,33 +512,6 @@ listbox.heading("Copies", text="Copies")
 listbox.column("Barcode", width=350)
 listbox.column("Copies", width=80, anchor="center")
 listbox.pack(pady=10)
-
-# --- Barcode History Persistence ---
-HISTORY_FILE = str(CONFIG_DIR / 'barcode_history.json')
-
-def load_history():
-    try:
-        with open(HISTORY_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except (OSError, json.JSONDecodeError):
-        return []
-
-def save_history(history):
-    try:
-        with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
-            json.dump(history, f)
-    except OSError as exc:
-        logging.error('Failed to save history: %s', exc)
-
-barcode_history = load_history()
-
-# Populate history on startup
-for item in barcode_history:
-    if isinstance(item, dict):
-        barcode, copies = item.get('barcode'), item.get('copies', 1)
-    else:
-        barcode, copies = item
-    listbox.insert('', 'end', values=(barcode, copies))
 
 reprint_button = ttk.Button(
     root, text=_("reprint_selected"), command=reprint_selected, width=20
