@@ -13,7 +13,6 @@ A simple, modern Windows application for printing Code128 barcodes to any connec
 - **Batch Printing** - Print multiple copies at once
 - **Barcode Caching** - Fast performance with intelligent image caching
 - **HiDPI Support** - Crisp display on high-resolution screens
-- **Keyboard Shortcuts** - Alt+P to print, Alt+R to reprint
 - **Persistent Settings** - Remembers your printer selection and window size
 
 ## Requirements
@@ -28,8 +27,8 @@ A simple, modern Windows application for printing Code128 barcodes to any connec
 
 1. Clone this repository:
 ```bash
-git clone https://github.com/yourusername/universal-barcode-printer.git
-cd universal-barcode-printer
+git clone https://github.com/dannyphamv/barcode-printer.git
+cd barcode-printer
 ```
 
 2. Install dependencies:
