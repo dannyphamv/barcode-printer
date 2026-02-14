@@ -13,7 +13,6 @@ A simple, modern Windows application for printing Code128 barcodes to any connec
 - **Batch Printing** - Print multiple copies at once
 - **Barcode Caching** - Fast performance with intelligent image caching
 - **HiDPI Support** - Crisp display on high-resolution screens
-- **Keyboard Shortcuts** - Alt+P to print, Alt+R to reprint
 - **Persistent Settings** - Remembers your printer selection and window size
 
 ## Requirements
