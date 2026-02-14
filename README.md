@@ -28,7 +28,7 @@ A simple, modern Windows application for printing Code128 barcodes to any connec
 
 1. Clone this repository:
 ```bash
-git clone https://github.com/yourusername/universal-barcode-printer.git
+git clone https://github.com/dannyphamv/barcode-printer.git
 cd universal-barcode-printer
 ```
 
