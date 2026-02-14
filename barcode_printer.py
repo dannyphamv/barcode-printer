@@ -23,13 +23,17 @@ from pathlib import Path
 import pywinstyles, sys
 
 
-# --- Printer List Cache ---
-# _PRINTER_LIST_CACHE stores the list of available printers to avoid repeated lookups
+# === PRINTER MANAGEMENT ===
+
 _PRINTER_LIST_CACHE = None
 
 
 def get_printers(force_refresh=False) -> list[str]:
-    """Return a list of available printer names. Refresh if force_refresh is True or cache is empty."""
+    """Return a list of available printer names.
+    
+    Caching prevents repeated expensive system calls to EnumPrinters.
+    Refreshing is needed when printers are added/removed during runtime.
+    """
     global _PRINTER_LIST_CACHE
     if force_refresh or _PRINTER_LIST_CACHE is None:
         _PRINTER_LIST_CACHE = [
@@ -41,33 +45,37 @@ def get_printers(force_refresh=False) -> list[str]:
     return _PRINTER_LIST_CACHE  # type: ignore
 
 
-# --- Barcode Image Cache ---
-# BARCODE_IMAGE_CACHE stores generated barcode images to avoid regenerating them
-# Limit the barcode image cache to 100 items (LRU cache)
+# === BARCODE GENERATION & CACHING ===
+
+# LRU cache prevents regenerating the same barcode multiple times
+# 100-item limit balances memory usage with cache effectiveness
 BARCODE_IMAGE_CACHE = OrderedDict()
 BARCODE_IMAGE_CACHE_MAXSIZE = 100
 
 
 def generate_label_image(barcode_text: str) -> Image.Image:
-    """Generate a label image with a barcode for the given text, using cache for performance."""
+    """Generate a 600x300px label with centered Code128 barcode.
+    
+    Returns a copy from cache to prevent modifications affecting cached version.
+    LRU eviction ensures memory doesn't grow unbounded.
+    """
     if barcode_text in BARCODE_IMAGE_CACHE:
-        # Move to end to mark as recently used
         BARCODE_IMAGE_CACHE.move_to_end(barcode_text)
-        return BARCODE_IMAGE_CACHE[
-            barcode_text
-        ].copy()  # Generate barcode using python-barcode
+        return BARCODE_IMAGE_CACHE[barcode_text].copy()
+    
     code128 = python_barcode.get("code128", barcode_text, writer=ImageWriter())
     with io.BytesIO() as buffer:
         code128.write(buffer)
         buffer.seek(0)
         barcode_img = Image.open(buffer)
-        # Create a white label and center the barcode on it
+        
+        # Standard label size chosen for compatibility with common label printers
         label_width, label_height = 600, 300
         label_img = Image.new("RGB", (label_width, label_height), 0xFFFFFF)
         barcode_x = (label_width - barcode_img.width) // 2
         barcode_y = (label_height - barcode_img.height) // 2
         label_img.paste(barcode_img, (barcode_x, barcode_y))
-        # Add to cache and enforce max size
+        
         BARCODE_IMAGE_CACHE[barcode_text] = label_img.copy()
         BARCODE_IMAGE_CACHE.move_to_end(barcode_text)
         if len(BARCODE_IMAGE_CACHE) > BARCODE_IMAGE_CACHE_MAXSIZE:
@@ -76,7 +84,11 @@ def generate_label_image(barcode_text: str) -> Image.Image:
 
 
 def print_image(img: Image.Image, printer_name: str) -> None:
-    """Send the given image to the specified printer using Windows APIs."""
+    """Send image to Windows printer using GDI.
+    
+    Scales image to fit printer's width while maintaining aspect ratio.
+    Centers vertically to avoid cutting off content on smaller paper.
+    """
     pdc = win32ui.CreateDC()
     if pdc is None:
         logging.error("Failed to create printer device context.")
@@ -85,16 +97,18 @@ def print_image(img: Image.Image, printer_name: str) -> None:
     try:
         pdc.StartDoc("Barcode Print")
         pdc.StartPage()
-        # Get printable area size
+        
         printable_width = pdc.GetDeviceCaps(win32con.HORZRES)
         printable_height = pdc.GetDeviceCaps(win32con.VERTRES)
-        # Resize image to fit printable width (maintain aspect ratio)
+        
+        # Scale to full width to maximize barcode readability
         if img.width != printable_width:
             scale = printable_width / img.width
             scaled_width = printable_width
             scaled_height = int(img.height * scale)
             img = img.resize((scaled_width, scaled_height))
-        # Center the image on the page
+        
+        # Center vertically to prevent partial prints on short paper
         x1 = 0
         y1 = (
             (printable_height - img.height) // 2 if printable_height > img.height else 0
@@ -112,16 +126,22 @@ def print_image(img: Image.Image, printer_name: str) -> None:
         pdc.DeleteDC()
 
 
-# Module-level variable to track last previewed barcode value (for pylint compatibility)
+# === UI UPDATE FUNCTIONS ===
+
+# Track last preview to avoid redundant regeneration on every keystroke
 _last_preview_value = None
 
 
 def update_preview(event=None):
-    """Update the barcode preview image in the GUI when the barcode entry changes."""
+    """Update barcode preview when entry text changes.
+    
+    Debouncing via _last_preview_value prevents excessive image generation.
+    Window resizing ensures all widgets remain visible as preview updates.
+    """
     global _last_preview_value
     _ = event
     barcode_value = entry.get().strip()
-    # Only update if value changed
+    
     if _last_preview_value == barcode_value:
         return
     _last_preview_value = barcode_value
@@ -131,24 +151,25 @@ def update_preview(event=None):
         return
     try:
         img = generate_label_image(barcode_value)
-        # Resize preview for display (use fast filter)
+        # BOX filter is fastest for downsizing preview images
         preview_img = (
             img.resize((400, 200), Image.BOX) if img.size != (400, 200) else img
         )
         tk_img = ImageTk.PhotoImage(preview_img)
         preview_label.config(image=tk_img)
+        # Keep reference to prevent garbage collection
         setattr(preview_label, "image", tk_img)
-        # --- Ensure window is large enough for preview and all widgets ---
+        
         root.update_idletasks()
-        # Always enforce the minsize, do not shrink below it
-        min_width, min_height = 650, 1000  # Enforce your intended minimum
+        # Enforce minimum size to prevent UI elements from being cut off
+        min_width, min_height = 650, 1000
         preview_width = preview_img.width
         preview_height = preview_img.height
-        extra_height = 400  # Adjust as needed for your layout
+        extra_height = 400
         min_width = max(min_width, preview_width + 100)
         min_height = max(min_height, preview_height + extra_height)
         root.minsize(min_width, min_height)
-        # Save the new window size to config for next launch
+        
         config["window_size"] = root.geometry()
         debounced_config_saver.save()
     except (OSError, RuntimeError, ValueError) as exc:
@@ -158,7 +179,10 @@ def update_preview(event=None):
 
 
 def parse_listbox_entry(item_text: str) -> tuple[str, int]:
-    """Parse a listbox entry and return (barcode_text, copies)."""
+    """Parse history entry to extract barcode text and copy count.
+    
+    Handles legacy format for backward compatibility with older history files.
+    """
     if item_text.startswith("Printed: "):
         text = item_text[len("Printed: ") :]
         if " x" in text:
@@ -177,8 +201,10 @@ def parse_listbox_entry(item_text: str) -> tuple[str, int]:
 
 
 def add_tooltip(widget, text):
-    """Add a tooltip to a widget that shows in the status bar."""
-
+    """Display tooltip text in status bar on hover.
+    
+    Status bar approach chosen over popup tooltips for cleaner UI.
+    """
     def on_enter(_event):
         status_var.set(text)
 
@@ -189,10 +215,16 @@ def add_tooltip(widget, text):
     widget.bind("<Leave>", on_leave)
 
 
+# === PRINTING OPERATIONS ===
+
 def threaded_print(
     img: Image.Image, printer_name: str, copies: int, barcode_value: str
 ) -> None:
-    """Threaded print operation to keep UI responsive."""
+    """Print barcode in background thread to keep UI responsive.
+    
+    UI updates must be queued via root.after() to avoid cross-thread crashes.
+    History updated after successful print to maintain data integrity.
+    """
     global barcode_history
     try:
         def set_progress_safe(msg):
@@ -201,16 +233,14 @@ def threaded_print(
         for i in range(copies):
             set_progress_safe(f"Printing copy {i+1} of {copies}...")
             print_image(img, printer_name)
-        # Add to history treeview and persist (UI updates must be in main thread)
+        
         def update_history():
             global barcode_history
-            # Check if barcode already exists in history
+            # Update existing entry or create new one
             found = False
             for idx, item in enumerate(barcode_history):
                 if item.get("barcode") == barcode_value:
-                    # Update copies count
                     barcode_history[idx]["copies"] += copies
-                    # Move to top
                     updated_item = barcode_history.pop(idx)
                     barcode_history = [updated_item] + barcode_history
                     found = True
@@ -220,13 +250,12 @@ def threaded_print(
             else:
                 barcode_history = barcode_history[:100]
             save_history(barcode_history)
-            # Update the treeview
-            # Remove any existing row for this barcode
+            
+            # Sync treeview with history
             for row in list(listbox.get_children()):
                 values = listbox.item(row, "values")
                 if values and values[0] == barcode_value:
                     listbox.delete(row)
-            # Insert at the top
             listbox.insert("", 0, values=(barcode_value, next((item["copies"] for item in barcode_history if item["barcode"] == barcode_value), copies)))
             entry.delete(0, tk.END)
             update_preview()
@@ -241,7 +270,7 @@ def threaded_print(
 
 
 def handle_print() -> None:
-    """Handle the print button click event."""
+    """Validate inputs and initiate print job."""
     barcode_value = entry.get().strip()
     selected_printer = printer_var.get()
     copies = copies_var.get()
@@ -262,8 +291,6 @@ def handle_print() -> None:
         return
     try:
         img = generate_label_image(barcode_value)
-        import threading
-        # Start print in a background thread
         threading.Thread(
             target=threaded_print,
             args=(img, selected_printer, copies_int, barcode_value),
@@ -275,7 +302,7 @@ def handle_print() -> None:
 
 
 def threaded_reprint(selected_items, selected_printer):
-    """Threaded reprint operation to keep UI responsive."""
+    """Reprint selected items from history in background thread."""
     def set_progress_safe(msg):
         root.after(0, set_progress, msg)
     try:
@@ -291,28 +318,24 @@ def threaded_reprint(selected_items, selected_printer):
                     f"Reprinting {idx+1}/{len(selected_items)}: copy {c+1} of {copies}"
                 )
                 print_image(img, selected_printer)
-            # Update the count in the treeview and history after reprint
+            
             def update_reprint_count():
                 global barcode_history
-                # Update history
                 for idx, item in enumerate(barcode_history):
                     if item.get("barcode") == barcode_text:
                         item["copies"] += copies
-                        # Move to top
                         updated_item = barcode_history.pop(idx)
                         barcode_history = [updated_item] + barcode_history
                         break
                 else:
-                    # If not found, add to top
                     barcode_history = ([{"barcode": barcode_text, "copies": copies}] + barcode_history)[:100]
                 barcode_history = barcode_history[:100]
                 save_history(barcode_history)
-                # Remove any existing row for this barcode
+                
                 for row in list(listbox.get_children()):
                     row_values = listbox.item(row, "values")
                     if row_values and row_values[0] == barcode_text:
                         listbox.delete(row)
-                # Insert at the top
                 listbox.insert("", 0, values=(barcode_text, next((item["copies"] for item in barcode_history if item["barcode"] == barcode_text), copies)))
             root.after(0, update_reprint_count)
         root.after(0, set_progress, "Done.")
@@ -325,7 +348,7 @@ def threaded_reprint(selected_items, selected_printer):
 
 
 def reprint_selected() -> None:
-    """Handle the reprint button click event."""
+    """Validate selection and initiate reprint job."""
     selected_items = listbox.selection()
     selected_printer = printer_var.get()
     if not selected_printer:
@@ -337,9 +360,6 @@ def reprint_selected() -> None:
         )
         return
     try:
-        import threading
-
-        # Start reprint in a background thread
         threading.Thread(
             target=threaded_reprint,
             args=(selected_items, selected_printer),
@@ -350,8 +370,9 @@ def reprint_selected() -> None:
         messagebox.showerror("Print Error", str(exc))
 
 
-# --- Configuration ---
-# Store config in AppData/BarcodePrinter/barcode_printer_config.json
+# === CONFIGURATION & PERSISTENCE ===
+
+# Store in AppData to persist settings across user sessions
 APPDATA_DIR = Path(os.getenv("APPDATA", os.path.expanduser("~")))
 CONFIG_DIR = APPDATA_DIR / "BarcodePrinter"
 CONFIG_DIR.mkdir(parents=True, exist_ok=True)
@@ -362,7 +383,7 @@ DEFAULT_CONFIG = {
     "language": "en",
 }
 
-# --- Internationalization ---
+# Internationalization support - currently English only
 LANGUAGES = {
     "en": {
         "select_printer": "Select Printer:",
@@ -380,13 +401,14 @@ LANGUAGES = {
         "about": "Barcode Printer\nVersion 1.0",
         "help": "Select a printer, scan a barcode, and click Print. Use Reprint to print again.",
     }
-    # Add more languages here
 }
 
 
-# --- Utility Functions ---
 def load_config():
-    """Load configuration from file or return defaults if not found/corrupt."""
+    """Load config from disk, falling back to defaults on error.
+    
+    Graceful degradation ensures app works even with corrupted config files.
+    """
     try:
         with open(CONFIG_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
@@ -396,7 +418,7 @@ def load_config():
 
 
 def save_config(cfg):
-    """Save configuration to file."""
+    """Persist configuration to disk."""
     try:
         with open(CONFIG_FILE, "w", encoding="utf-8") as f:
             json.dump(cfg, f)
@@ -406,11 +428,12 @@ def save_config(cfg):
 
 config = load_config()
 
-# --- Barcode History Persistence ---
+# History stored separately to avoid losing it when config is corrupted
 HISTORY_FILE = str(CONFIG_DIR / "barcode_history.json")
 
 
 def load_history():
+    """Load print history from disk."""
     try:
         with open(HISTORY_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
@@ -419,7 +442,7 @@ def load_history():
 
 
 def save_history(history):
-    # Limit history to the most recent 100 entries
+    """Persist print history, limiting to 100 most recent entries."""
     limited_history = history[-100:]
     try:
         with open(HISTORY_FILE, "w", encoding="utf-8") as f:
@@ -431,16 +454,14 @@ def save_history(history):
 barcode_history = load_history()
 
 
-# --- Internationalization Helper ---
 def _(key: str) -> str:
-    """Internationalization helper to get translated strings."""
+    """Get localized string for current language."""
     lang = config.get("language", "en")
     return str(LANGUAGES.get(lang, LANGUAGES["en"]).get(key, key))
 
 
-# --- Graceful Shutdown ---
 def on_exit():
-    """Save config and log exit on application close."""
+    """Flush pending config saves before exit to prevent data loss."""
     debounced_config_saver.flush()
     logging.info("Application exited gracefully.")
 
@@ -448,8 +469,12 @@ def on_exit():
 atexit.register(on_exit)
 
 
-# --- Debounced Config Save ---
 class DebouncedConfigSaver:
+    """Debounce config saves to avoid excessive disk I/O.
+    
+    Delays save for 0.5s after last change to batch rapid updates
+    (e.g., window resizing generates many geometry changes).
+    """
     def __init__(self, delay=0.5):
         self.delay = delay
         self._timer = None
@@ -461,6 +486,7 @@ class DebouncedConfigSaver:
         self._timer.start()
 
     def flush(self):
+        """Force immediate save, used on app exit."""
         if self._timer:
             self._timer.cancel()
             save_config(config)
@@ -470,10 +496,15 @@ class DebouncedConfigSaver:
 debounced_config_saver = DebouncedConfigSaver()
 
 
-# --- HiDPI Scaling for Tkinter (Windows) ---
+# === HiDPI SUPPORT ===
+
 def set_hidpi_scaling(root):
+    """Enable DPI awareness for crisp rendering on high-DPI displays.
+    
+    Without this, app appears blurry on 4K/retina screens.
+    Windows-only as other platforms handle DPI automatically.
+    """
     try:
-        # Only apply on Windows
         if hasattr(ctypes, "windll"):
             user32 = ctypes.windll.user32
             user32.SetProcessDPIAware()
@@ -488,7 +519,8 @@ def set_hidpi_scaling(root):
         print(f"Could not set HiDPI scaling: {exc}")
 
 
-# --- GUI Setup ---
+# === GUI INITIALIZATION ===
+
 root = tk.Tk()
 set_hidpi_scaling(root)
 root.title("Barcode Printer")
@@ -496,27 +528,28 @@ root.geometry(config.get("window_size", "550x750"))
 root.minsize(650, 1000)
 
 
-# --- Theme Functions ---
 def apply_theme_to_titlebar(root):
-    """Apply theme-appropriate styling to the window title bar."""
+    """Style native title bar to match app theme.
+    
+    Windows 10/11 require different APIs for title bar customization.
+    Alpha workaround forces title bar refresh on Windows 10.
+    """
     version = sys.getwindowsversion()
     current_theme = sv_ttk.get_theme()
 
     if version.major == 10 and version.build >= 22000:
-        # Windows 11: Set the title bar color to match the theme
+        # Windows 11
         header_color = "#1c1c1c" if current_theme == "dark" else "#fafafa"
         pywinstyles.change_header_color(root, header_color)
     elif version.major == 10:
-        # Windows 10: Apply dark or normal style based on theme
+        # Windows 10
         style = "dark" if current_theme == "dark" else "normal"
         pywinstyles.apply_style(root, style)
-
-        # Force title bar update on Windows 10 (workaround for delayed updates)
+        # HACK: Force title bar update by changing transparency
         root.wm_attributes("-alpha", 0.99)
         root.wm_attributes("-alpha", 1)
 
 
-# --- Theme Persistence ---
 def get_theme_from_config():
     return config.get("theme", "dark")
 
@@ -529,8 +562,8 @@ def set_theme_in_config(theme):
 sv_ttk.set_theme(get_theme_from_config())
 
 
-# --- Theme Toggle Button ---
 def toggle_theme():
+    """Switch between dark and light themes."""
     current_theme = sv_ttk.get_theme()
     new_theme = "light" if current_theme == "dark" else "dark"
     sv_ttk.set_theme(new_theme)
@@ -538,11 +571,9 @@ def toggle_theme():
     theme_button.config(
         text=f"Switch to {'Dark' if new_theme == 'light' else 'Light'} Theme"
     )
-    # Update title bar to match new theme
     apply_theme_to_titlebar(root)
 
 
-# Add theme toggle button to the top right
 theme_button = ttk.Button(
     root,
     text=f"Switch to {'Light' if get_theme_from_config() == 'dark' else 'Dark'} Theme",
@@ -551,27 +582,23 @@ theme_button = ttk.Button(
 theme_button.pack(anchor="ne", padx=10, pady=5)
 
 
-# Remove the <Configure> binding for window size
-# Save window size only on close and focus out
-
 def save_window_size_on_focus_out(event=None):
+    """Save window geometry when focus lost to persist user preferences."""
     config["window_size"] = root.geometry()
     debounced_config_saver.save()
 
 
 root.bind("<FocusOut>", save_window_size_on_focus_out)
 
-# --- Set window icon using a PNG file ---
 try:
-    icon_img = tk.PhotoImage(
-        file="./barcode-scan.png"
-    )  # Place your icon.png in the same directory
+    icon_img = tk.PhotoImage(file="./barcode-scan.png")
     root.iconphoto(True, icon_img)
 except Exception as exc:
     print(f"Could not set window icon: {exc}")
 
 
-# --- Widgets ---
+# === WIDGET CREATION ===
+
 ttk.Label(root, text=_("select_printer")).pack(pady=(10, 0))
 printer_var = tk.StringVar(value=config.get("default_printer", ""))
 printer_dropdown = ttk.Combobox(
@@ -581,6 +608,7 @@ printer_dropdown.pack(pady=(0, 10))
 
 
 def on_printer_selected(_event=None):
+    """Save selected printer as default for next session."""
     config["default_printer"] = printer_var.get()
     debounced_config_saver.save()
 
@@ -609,7 +637,6 @@ ttk.Label(root, text=_("preview")).pack(pady=(10, 0))
 preview_label = ttk.Label(root)
 preview_label.pack(pady=(0, 10))
 
-# --- Progress Indicator ---
 progress_var = tk.StringVar(value="")
 progress_label = ttk.Label(
     root, textvariable=progress_var, font=("Segoe UI Variable", 12)
@@ -618,13 +645,13 @@ progress_label.pack(pady=(0, 5))
 
 
 def set_progress(msg):
-    """Update the progress label in the GUI."""
+    """Update progress indicator during print operations."""
     progress_var.set(msg)
     root.update_idletasks()
 
 
 def on_print():
-    """Save selected printer and handle print button click."""
+    """Handle print button click."""
     config["default_printer"] = printer_var.get()
     handle_print()
 
@@ -634,11 +661,9 @@ print_button = ttk.Button(
 )
 print_button.pack(pady=(5, 10))
 
-# Create a frame for the treeview and scrollbar
 tree_frame = ttk.Frame(root)
 tree_frame.pack(pady=10, padx=10, fill="both", expand=False)
 
-# Use ttk.Treeview as a themed replacement for Listbox
 tree_columns = ("Barcode", "Copies")
 listbox = ttk.Treeview(tree_frame, columns=tree_columns, show="headings", height=10)
 listbox.heading("Barcode", text="Barcode")
@@ -646,20 +671,18 @@ listbox.heading("Copies", text="Copies")
 listbox.column("Barcode", width=350)
 listbox.column("Copies", width=80, anchor="center")
 
-# Create and configure scrollbar
 scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=listbox.yview)
 listbox.configure(yscrollcommand=scrollbar.set)
 
-# Pack the treeview and scrollbar
 listbox.pack(side="left", fill="both", expand=True)
 scrollbar.pack(side="right", fill="y")
 
-# Populate history on startup
+# Populate history in reverse to show newest first
 for item in reversed(barcode_history):
     if isinstance(item, dict):
         barcode, copies = item.get("barcode"), item.get("copies", 1)
     else:
-        # Handle legacy format if needed
+        # Legacy format compatibility
         barcode, copies = item, 1
     if barcode:
         listbox.insert("", 0, values=(barcode, copies))
@@ -671,26 +694,25 @@ reprint_button.pack(pady=(5, 10))
 
 entry.bind("<Return>", lambda event: on_print())
 
-# --- Status Bar ---
 status_var = tk.StringVar(value="Ready")
 status_label = ttk.Label(root, textvariable=status_var, font=("Segoe UI Variable", 12))
 status_label.pack(pady=(0, 5))
 
 
 def set_status(msg):
-    """Update the status bar in the GUI."""
+    """Update status bar text."""
     status_var.set(msg)
     root.update_idletasks()
 
 
-# --- Accessibility: Add tooltips ---
+# Add tooltips for better UX
 add_tooltip(print_button, "Print the current barcode")
 add_tooltip(reprint_button, "Reprint selected barcodes")
 add_tooltip(printer_dropdown, "Select a printer")
 add_tooltip(entry, "Enter or scan a barcode")
 add_tooltip(copies_spinbox, "Set number of copies")
 
-# --- Keyboard Navigation ---
+# Keyboard shortcuts for accessibility
 print_button.focus_set()
 root.bind("<Alt-p>", lambda e: print_button.invoke())
 root.bind("<Alt-r>", lambda e: reprint_button.invoke())
@@ -698,15 +720,18 @@ root.bind("<Alt-r>", lambda e: reprint_button.invoke())
 apply_theme_to_titlebar(root)
 
 
-# --- Focus entry when window regains focus ---
 def focus_entry_on_window_focus(event=None):
+    """Return focus to entry field when window regains focus.
+    
+    Enables seamless barcode scanner workflow where user can
+    scan -> print -> scan without manual clicking.
+    """
     entry.focus_set()
 
 
 root.bind("<FocusIn>", focus_entry_on_window_focus)
 
-# Pillow plugin fix for PyInstaller
+# WORKAROUND: Keep reference to prevent PIL cleanup issues in PyInstaller
 _img_ref = ImageTk.PhotoImage(Image.new("RGB", (1, 1)))
 
-# --- Start the GUI event loop ---
 root.mainloop()
