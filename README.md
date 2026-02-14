@@ -24,7 +24,7 @@ A simple, modern Windows application for printing Code128 barcodes to any connec
 
 ## Installation
 
-### Option 2: Run from Source
+### Run from Source
 
 1. Clone this repository:
 ```bash
@@ -80,10 +80,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [python-barcode](https://github.com/WhyNotHugo/python-barcode) - Barcode generation
 - [Pillow](https://python-pillow.org/) - Image processing
 - Icon from [Flaticon](https://www.flaticon.com/)
-
-## Author
-
-**Danny Pham**
 
 ## Support
 
