@@ -1,5 +1,5 @@
 # barcode_printer.py
-# Universal Barcode Printer - Print barcodes to any Windows printer with a simple GUI
+# Barcode Printer - Print barcodes to any Windows printer with a simple GUI
 
 import logging
 import json
@@ -351,9 +351,9 @@ def reprint_selected() -> None:
 
 
 # --- Configuration ---
-# Store config in AppData/UniversalBarcodePrinter/barcode_printer_config.json
+# Store config in AppData/BarcodePrinter/barcode_printer_config.json
 APPDATA_DIR = Path(os.getenv("APPDATA", os.path.expanduser("~")))
-CONFIG_DIR = APPDATA_DIR / "UniversalBarcodePrinter"
+CONFIG_DIR = APPDATA_DIR / "BarcodePrinter"
 CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 CONFIG_FILE = str(CONFIG_DIR / "barcode_printer_config.json")
 DEFAULT_CONFIG = {
@@ -377,7 +377,7 @@ LANGUAGES = {
         "no_selection": "Please select at least one barcode from the list.",
         "print_error": "Print Error",
         "reprint_info": "Reprinted {count} barcode(s).",
-        "about": "Universal Barcode Printer\nVersion 1.0",
+        "about": "Barcode Printer\nVersion 1.0",
         "help": "Select a printer, scan a barcode, and click Print. Use Reprint to print again.",
     }
     # Add more languages here
@@ -491,7 +491,7 @@ def set_hidpi_scaling(root):
 # --- GUI Setup ---
 root = tk.Tk()
 set_hidpi_scaling(root)
-root.title("Universal Barcode Printer")
+root.title("Barcode Printer")
 root.geometry(config.get("window_size", "550x750"))
 root.minsize(650, 1000)
 

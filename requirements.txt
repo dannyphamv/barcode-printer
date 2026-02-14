@@ -1,4 +1,4 @@
-# Requirements for Universal Barcode Printer
+# Requirements for Barcode Printer
 # Core GUI and theme
 sv-ttk>=2.0.0
 

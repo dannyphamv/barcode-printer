@@ -1,8 +1,8 @@
-# Universal Barcode Printer
+# Barcode Printer
 
 A simple, modern Windows application for printing Code128 barcodes to any connected printer. Features a clean GUI with dark/light theme support, real-time barcode preview, and print history tracking.
 
-![Universal Barcode Printer Screenshot](screenshot.png)
+![Barcode Printer Screenshot](screenshot.png)
 
 ## Features
 
