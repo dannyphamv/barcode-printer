@@ -2,7 +2,7 @@
 
 A simple, modern Windows application for printing Code128 barcodes to any connected printer. Features a clean GUI with dark/light theme support, real-time barcode preview, and print history tracking.
 
-![Barcode Printer Screenshot](screenshot.avif)
+![Barcode Printer Screenshot](screenshot-dark.avif)
 
 ## Features
 
