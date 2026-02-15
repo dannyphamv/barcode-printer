@@ -608,7 +608,19 @@ def set_hidpi_scaling(root):
 root = tk.Tk()
 set_hidpi_scaling(root)
 root.title("Barcode Printer")
-root.geometry(config.get("window_size", "550x750"))
+
+# Validate and apply window geometry
+window_size = config.get("window_size", "550x750")
+if isinstance(window_size, dict):
+    # Handle legacy dictionary format
+    width = window_size.get("width", 550)
+    height = window_size.get("height", 750)
+    window_size = f"{width}x{height}"
+elif not isinstance(window_size, str) or "x" not in window_size:
+    # Invalid format, use default
+    window_size = "550x750"
+
+root.geometry(window_size)
 root.minsize(MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT)
 
 
