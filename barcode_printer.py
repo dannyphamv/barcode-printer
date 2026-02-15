@@ -595,7 +595,7 @@ def set_hidpi_scaling(root):
                     if hasattr(user32, "GetDpiForSystem")
                     else 96
                 )
-                scaling = dpi / 96.0
+                scaling = dpi / 72.0
                 root.tk.call("tk", "scaling", scaling)
             except Exception as exc:
                 logging.warning(f"Failed to set scaling: {exc}")
