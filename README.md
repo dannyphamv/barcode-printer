@@ -41,10 +41,9 @@ pip install -r requirements.txt
 python barcode_printer.py
 ```
 
-### Or run from .bat file
-1. Run this batch file:
+### Or launch from .bat file
 ```bash
-run_barcode_printer.bat
+run.bat
 ```
 
 ## Usage
