@@ -84,4 +84,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [sv-ttk](https://github.com/rdbende/Sun-Valley-ttk-theme) - Beautiful modern theme
 - [python-barcode](https://github.com/WhyNotHugo/python-barcode) - Barcode generation
 - [Pillow](https://python-pillow.org/) - Image processing
-- Icon from [Flaticon](https://www.flaticon.com/)
+- Icon from <a href="https://www.flaticon.com/free-icons/barcode" title="barcode icons">Barcode icons created by Vectorslab - Flaticon</a>
