@@ -23,6 +23,10 @@ A simple, modern Windows application for printing Code128 barcodes to any connec
 
 ## Installation
 
+### Download the Installer
+
+The easiest way to get started is to download the pre-built installer directly from the [Releases](https://github.com/dannyphamv/barcode-printer/releases) page. Run `LegacyBarcodePrinter_Setup.exe` and follow the prompts — no Python required.
+
 ### Run from Source
 
 1. Clone this repository:
