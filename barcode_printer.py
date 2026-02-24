@@ -413,7 +413,7 @@ def reprint_selected() -> None:
 # === CONFIGURATION & PERSISTENCE ===
 
 APPDATA_DIR = Path(os.getenv("APPDATA", os.path.expanduser("~")))
-CONFIG_DIR = APPDATA_DIR / "BarcodePrinter"
+CONFIG_DIR = APPDATA_DIR / "LegacyBarcodePrinter"
 CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 CONFIG_FILE = CONFIG_DIR / "barcode_printer_config.json"
 HISTORY_FILE = CONFIG_DIR / "barcode_history.json"

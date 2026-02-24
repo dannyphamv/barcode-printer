@@ -9,7 +9,9 @@ PrivilegesRequired=lowest
 CloseApplications=yes
 CloseApplicationsFilter=LegacyBarcodePrinter.exe
 RestartApplications=yes
-
+LicenseFile=LICENSE.txt
+AppId={{d0e7e2e6-c6be-434a-927c-a7a105c5f12a}}
+AppComments=A Windows application using Tkinter for printing Code128 barcodes to any connected printer
 
 ; Install paths
 DefaultDirName={autopf}\Legacy Barcode Printer
