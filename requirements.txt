@@ -11,3 +11,6 @@ pywin32>=306
 
 # Windows styling (for title bar theming)
 pywinstyles>=1.0.0
+
+#pyinstaller for packaging the application
+pyinstaller>=6.19.0

@@ -41,9 +41,9 @@ pip install -r requirements.txt
 python barcode_printer.py
 ```
 
-### Or launch from .bat file
+### Or create .exe
 ```bash
-run.bat
+pyinstaller --onedir --windowed --noconsole --name="LegacyBarcodePrinter" --add-data="package_color.png:." --icon="favicon.ico" --collect-all=PIL --collect-all=barcode --collect-all=sv_ttk --collect-all=pywinstyles --hidden-import=win32print --hidden-import=win32ui --hidden-import=win32con --hidden-import=win32api barcode_printer.py
 ```
 
 ## Usage
@@ -71,6 +71,7 @@ run.bat
 - `python-barcode` - Barcode generation
 - `pywin32` - Windows printing API
 - `pywinstyles` - Windows 10/11 title bar theming
+- `pyinstaller` - Packaging the application as EXE
 
 See [requirements.txt](requirements.txt) for specific versions.
 

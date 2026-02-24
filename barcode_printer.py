@@ -1,27 +1,36 @@
 # barcode_printer.py
 # Barcode Printer - Print barcodes to any Windows printer with a simple GUI
+import os
+import sys
 
-import logging
-import json
+if getattr(sys, "frozen", False):
+    base_path = sys._MEIPASS
+    from barcode.writer import ImageWriter
+
+    ImageWriter.FONT_PATH = os.path.join(
+        base_path, "barcode", "fonts", "DejaVuSansMono.ttf"
+    )
 import atexit
-from tkinter import messagebox
-from tkinter import ttk
-from PIL import Image, ImageTk, ImageWin
-import barcode as python_barcode
-from barcode.writer import ImageWriter
+import ctypes
 import io
+import json
+import logging
+import os
+import sys
+import threading
+import tkinter as tk
+from collections import OrderedDict
+from pathlib import Path
+from tkinter import messagebox, ttk
+
+import barcode as python_barcode
+import pywinstyles
+import sv_ttk
+import win32con
 import win32print
 import win32ui
-import win32con
-import tkinter as tk
-import sv_ttk
-from collections import OrderedDict
-import threading
-import ctypes
-import os
-from pathlib import Path
-import pywinstyles
-import sys
+from barcode.writer import ImageWriter
+from PIL import Image, ImageTk, ImageWin
 
 # Configure logging
 logging.basicConfig(
@@ -430,7 +439,7 @@ LANGUAGES = {
         "no_selection": "Please select at least one barcode from the list.",
         "print_error": "Print Error",
         "reprint_info": "Reprinted {count} barcode(s).",
-        "about": "Barcode Printer\nVersion 1.0",
+        "about": "Legacy Barcode Printer\nVersion 1.0",
         "help": "Select a printer, scan a barcode, and click Print.",
     }
 }
@@ -607,7 +616,7 @@ def set_hidpi_scaling(root):
 
 root = tk.Tk()
 set_hidpi_scaling(root)
-root.title("Barcode Printer")
+root.title("Legacy Barcode Printer")
 
 # Validate and apply window geometry
 window_size = config.get("window_size", "550x750")
@@ -691,7 +700,10 @@ root.bind("<FocusOut>", save_window_size_on_focus_out)
 
 # Set window icon
 try:
-    icon_path = Path("./barcode-scan.png")
+    icon_path = Path("package_color.png")
+    icon_path = (
+        Path("_internal/package_color.png") if not icon_path.exists() else icon_path
+    )
     if icon_path.exists():
         icon_img = tk.PhotoImage(file=str(icon_path))
         root.iconphoto(True, icon_img)
