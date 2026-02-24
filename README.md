@@ -15,12 +15,6 @@ A simple, modern Windows application for printing Code128 barcodes to any connec
 - **HiDPI Support** - Crisp display on high-resolution screens
 - **Persistent Settings** - Remembers your printer selection and window size
 
-## Requirements
-
-- Windows 10 or Windows 11
-- Python 3.8 or higher (if running from source)
-- A connected printer
-
 ## Installation
 
 ### Download the Installer
@@ -82,10 +76,3 @@ See [requirements.txt](requirements.txt) for specific versions.
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE.txt](LICENSE) file for details.
-
-## Acknowledgments
-
-- [sv-ttk](https://github.com/rdbende/Sun-Valley-ttk-theme) - Beautiful modern theme
-- [python-barcode](https://github.com/WhyNotHugo/python-barcode) - Barcode generation
-- [Pillow](https://python-pillow.org/) - Image processing
-- Icon from <a href="https://www.flaticon.com/free-icons/barcode" title="barcode icons">Barcode icons created by Vectorslab - Flaticon</a>
