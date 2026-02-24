@@ -55,7 +55,7 @@ function InitializeSetup(): Boolean;
 begin
   if not IsWin64 then
   begin
-    MsgBox('Barcode Printer requires a 64-bit version of Windows.', mbError, MB_OK);
+    MsgBox('Legacy Barcode Printer requires a 64-bit version of Windows.', mbError, MB_OK);
     Result := False;
   end else
     Result := True;
@@ -69,7 +69,7 @@ Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription
 Name: "startupicon"; Description: "Start automatically with Windows"; GroupDescription: "Startup:"; Flags: unchecked
 
 [Registry]
-Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "BarcodePrinter"; ValueData: """{app}\BarcodePrinter.exe"""; Tasks: startupicon; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "LegacyBarcodePrinter"; ValueData: """{app}\LegacyBarcodePrinter.exe"""; Tasks: startupicon; Flags: uninsdeletevalue
 
 [Files]
 Source: "dist\LegacyBarcodePrinter\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
